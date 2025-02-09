@@ -30,8 +30,7 @@ class GenerateSuggestionsTest {
 
     @Test
     fun testNonExistingCommand() {
-        val suggestions = manager.generateSuggestions("", "/nonexistent")
-        assertTrue(suggestions.isEmpty())
+        assertTrue(suggest("/nonexistent").isEmpty())
     }
 
     @Test
@@ -104,14 +103,12 @@ class GenerateSuggestionsTest {
 
     @Test
     fun testParameterAndSubcommandSuggestionsMerging() {
-        val expected = setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY", "aaa", "bbb", "oran")
-        assertEquals(expected, suggest("/fruit "))
+        assertEquals(setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY", "aaa", "bbb", "oran"), suggest("/fruit "))
     }
 
     @Test
     fun testPartialInputForMergedSuggestions() {
-        val expectedA = setOf("APPLE", "aaa")
-        assertEquals(expectedA, suggest("/fruit a"))
+        assertEquals(setOf("APPLE", "aaa"), suggest("/fruit a"))
     }
 
     @Test
@@ -127,26 +124,22 @@ class GenerateSuggestionsTest {
 
     @Test
     fun testNestedCommandParameterSuggestions() {
-        val expected = setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY", "sss", "bana")
-        assertEquals(expected, suggest("/fruit oran "))
+        assertEquals(setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY", "sss", "bana"), suggest("/fruit oran "))
     }
 
     @Test
     fun testFilteredNestedParameterSuggestions() {
-        val expectedB = setOf("BANANA", "bana")
-        assertEquals(expectedB, suggest("/fruit oran b"))
+        assertEquals(setOf("BANANA", "bana"), suggest("/fruit oran b"))
     }
 
     @Test
     fun testCaseInsensitiveParameterHandling() {
-        val expected = setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY", "aaa", "bbb", "oran")
-        assertEquals(expected, suggest("/FRUIT "))
+        assertEquals(setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY", "aaa", "bbb", "oran"), suggest("/FRUIT "))
     }
 
     @Test
     fun testExcessiveWhitespaceHandling() {
-        val expected = setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY", "aaa", "bbb", "oran")
-        assertEquals(expected, suggest("/fruit      "))
+        assertEquals(setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY", "aaa", "bbb", "oran"), suggest("/fruit      "))
     }
 
     @Test
@@ -156,11 +149,9 @@ class GenerateSuggestionsTest {
 
     @Test
     fun testAliasMatching() {
-        val suggestionsMes = manager.generateSuggestions("", "/mes")
-        assertTrue(suggestionsMes.contains("message"))
+        assertTrue(suggest("/mes").contains("message"))
 
-        val suggestionsTe = manager.generateSuggestions("", "/te")
-        assertTrue(suggestionsTe.contains("tell"))
+        assertTrue(suggest("/te").contains("tell"))
     }
 
     @Test
