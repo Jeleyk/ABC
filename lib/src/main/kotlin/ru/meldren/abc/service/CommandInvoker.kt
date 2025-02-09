@@ -98,13 +98,12 @@ internal class CommandInvoker<S : Any, C : Any>(
         if (!hasPermission(sender, rootCmd)) return emptyList()
 
         val (completeArgs, pendingToken) = if (rawTokens.isEmpty()) {
-            Pair(emptyList(), null)
+            return emptyList()
         } else if (completeInput) {
             Pair(rawTokens.dropLast(1), "")
         } else {
             Pair(rawTokens.dropLast(1), rawTokens.last())
         }
-        if (pendingToken == null) return emptyList()
 
         var resolvedTokens = 0
         var currentCommand = rootCmd
@@ -181,7 +180,7 @@ internal class CommandInvoker<S : Any, C : Any>(
         return suggestionsSet.toList().distinct()
     }
 
-    private fun hasPermission(sender: S, commandData: AbstractCommandData): Boolean = try {
+    private fun hasPermission(sender: S, commandData: AbstractCommandData) = try {
         processorRegistry.permissionHandler?.checkPermission(sender, commandData)
         true
     } catch (_: NotEnoughPermissionException) {
