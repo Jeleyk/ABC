@@ -136,7 +136,7 @@ internal class CommandInvoker<S : Any, C : Any>(
 
         for (defaultSub in currentCommand.defaultSubcommands) {
             if (!hasPermission(sender, defaultSub)) continue
-            if (paramIndex in defaultSub.parameters.indices) {
+            if (paramIndex < defaultSub.parameters.size) {
                 val param = defaultSub.parameters[paramIndex]
                 val provider = this.suggestions[param.findAnnotation<Suggest>()?.providerClass]
                     ?: defaultSuggestions[param.type.kotlin]
