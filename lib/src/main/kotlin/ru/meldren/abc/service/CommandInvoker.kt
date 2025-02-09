@@ -81,7 +81,7 @@ internal class CommandInvoker<S : Any, C : Any>(
         val completeInput = input.endsWith(" ")
         val withoutPrefix = input.substring(commandPrefix.length)
         val rawTokens = withoutPrefix.split("\\s+".toRegex()).filter { it.isNotEmpty() }.toMutableList()
-        if (completeInput) rawTokens.add("")
+        if (completeInput) rawTokens += ""
 
         if (rawTokens.isEmpty()) {
             return registeredCommands.filter { hasPermission(sender, it) }
@@ -150,7 +150,7 @@ internal class CommandInvoker<S : Any, C : Any>(
                             )
                         }
                     else paramSuggestions
-                    suggestionsSet.addAll(filtered)
+                    suggestionsSet += filtered
                 }
             }
         }
@@ -163,7 +163,7 @@ internal class CommandInvoker<S : Any, C : Any>(
                     )
                 ) {
                     if (subList.any { hasPermission(sender, it) }) {
-                        suggestionsSet.add(alias)
+                        suggestionsSet += alias
                     }
                 }
             }
@@ -172,7 +172,7 @@ internal class CommandInvoker<S : Any, C : Any>(
                     !alias.equals(pendingToken, ignoreCase = true) &&
                     hasPermission(sender, childCmd)
                 ) {
-                    suggestionsSet.add(alias)
+                    suggestionsSet += alias
                 }
             }
         }

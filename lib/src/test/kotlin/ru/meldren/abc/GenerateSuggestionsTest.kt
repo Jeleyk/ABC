@@ -9,16 +9,14 @@ import ru.meldren.abc.common.SubcommandData
 import ru.meldren.abc.exception.invocation.CommandPlainTextException
 import ru.meldren.abc.exception.invocation.NotEnoughPermissionException
 import ru.meldren.abc.processor.SuggestionProvider
-import java.util.*
-import java.util.stream.Collectors
 
 class GenerateSuggestionsTest {
     private val manager = CommandManager<Any, Any>().apply {
         registerCommand(TestCommand())
-        registerSuggestionProvider(Fruit::class.java) { _: Any, input: String, _: CommandParameter ->
-            Arrays.stream(Fruit.values())
-                .map(Fruit::name).filter { name -> name.startsWith(input.uppercase(Locale.getDefault())) }
-                .collect(Collectors.toList())
+        registerSuggestionProvider(Fruit::class.java) { _, input, _ ->
+            Fruit.values()
+                .map { it.name }
+                .filter { it.startsWith(input.uppercase()) }
         }
         registerSuggestionProvider(provider = RecipientProvider)
         registerSuggestionProvider(provider = ContentProvider)
