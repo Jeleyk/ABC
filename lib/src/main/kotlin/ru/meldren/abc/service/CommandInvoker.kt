@@ -77,18 +77,15 @@ internal class CommandInvoker<S : Any, C : Any>(
 
     fun generateSuggestions(sender: S, input: String): List<String> {
         if (!input.startsWith(commandPrefix)) throw CommandPlainTextException()
-
         val completeInput = input.endsWith(" ")
         val withoutPrefix = input.substring(commandPrefix.length)
         val rawTokens = withoutPrefix.split("\\s+".toRegex()).filter { it.isNotEmpty() }.toMutableList()
         if (completeInput) rawTokens += ""
-
         if (rawTokens.isEmpty()) {
             return registeredCommands.filter { hasPermission(sender, it) }
                 .flatMap { it.aliases }
                 .distinct()
         }
-
         val commandToken = rawTokens.removeAt(0)
         val rootCmd = commandsByAliases[commandToken.lowercase()] ?: run {
             return registeredCommands.filter { hasPermission(sender, it) }
@@ -96,7 +93,6 @@ internal class CommandInvoker<S : Any, C : Any>(
                 .distinct()
         }
         if (!hasPermission(sender, rootCmd)) return emptyList()
-
         val (completeArgs, pendingToken) = if (rawTokens.isEmpty()) {
             return emptyList()
         } else if (completeInput) {
@@ -104,11 +100,9 @@ internal class CommandInvoker<S : Any, C : Any>(
         } else {
             Pair(rawTokens.dropLast(1), rawTokens.last())
         }
-
         var resolvedTokens = 0
         var currentCommand = rootCmd
-        var methodSubcommandChosen = false
-
+        var candidateSubcommandDatas: List<SubcommandData>? = null
         for (token in completeArgs) {
             val child = currentCommand.childByAliases[token.lowercase()]
             if (child != null && hasPermission(sender, child)) {
@@ -116,67 +110,77 @@ internal class CommandInvoker<S : Any, C : Any>(
                 resolvedTokens++
                 continue
             }
-            if (currentCommand.subcommandByAliases.containsKey(token.lowercase())) {
-                methodSubcommandChosen = true
-                resolvedTokens++
-                continue
-            }
-            if (currentCommand.defaultSubcommands.isNotEmpty()) {
-                break
-            } else {
-                return emptyList()
-            }
-        }
-
-        if (methodSubcommandChosen && pendingToken.isEmpty()) return emptyList()
-
-        val paramIndex = completeArgs.size - resolvedTokens
-
-        val suggestionsSet = mutableSetOf<String>()
-
-        for (defaultSub in currentCommand.defaultSubcommands) {
-            if (!hasPermission(sender, defaultSub)) continue
-            if (paramIndex < defaultSub.parameters.size) {
-                val param = defaultSub.parameters[paramIndex]
-                val provider = this.suggestions[param.findAnnotation<Suggest>()?.providerClass]
-                    ?: defaultSuggestions[param.type.kotlin]
-                if (provider != null) {
-                    val paramSuggestions = provider.suggest(sender, pendingToken, param)
-                    val filtered = if (pendingToken.isNotEmpty())
-                        paramSuggestions.filter {
-                            it.startsWith(pendingToken, ignoreCase = true) && !it.equals(
-                                pendingToken,
-                                ignoreCase = true
-                            )
-                        }
-                    else paramSuggestions
-                    suggestionsSet += filtered
+            val subList = currentCommand.subcommandByAliases[token.lowercase()]
+            if (subList != null) {
+                val permitted = subList.filter { hasPermission(sender, it) }
+                if (permitted.isNotEmpty()) {
+                    candidateSubcommandDatas = permitted
+                    resolvedTokens++
+                    break
                 }
             }
+            break
         }
-
-        if (paramIndex == 0) {
-            for ((alias, subList) in currentCommand.subcommandByAliases) {
-                if (alias.startsWith(pendingToken, ignoreCase = true) && !alias.equals(
-                        pendingToken,
-                        ignoreCase = true
-                    )
-                ) {
-                    if (subList.any { hasPermission(sender, it) }) {
-                        suggestionsSet += alias
+        val parameterTokens = completeArgs.drop(resolvedTokens)
+        val providedCount = parameterTokens.size
+        val suggestionsSet = mutableSetOf<String>()
+        if (candidateSubcommandDatas != null) {
+            if (providedCount == 0 && pendingToken.isNotEmpty()) return emptyList()
+            val validCandidates = candidateSubcommandDatas.filter { candidate ->
+                if (providedCount == 0) true else {
+                    if (candidate.parameters.size >= providedCount) {
+                        val param = candidate.parameters[providedCount - 1]
+                        val provider = suggestions[param.findAnnotation<Suggest>()?.providerClass] ?: defaultSuggestions[param.type.kotlin]
+                        if (provider != null) {
+                            val completions = provider.suggest(sender, parameterTokens.last(), param)
+                            completions.any { it.equals(parameterTokens.last(), ignoreCase = true) }
+                        } else false
+                    } else false
+                }
+            }
+            val overloadCandidates = validCandidates.filter { it.parameters.size > providedCount }
+            for (candidate in overloadCandidates) {
+                val param = candidate.parameters[providedCount]
+                val provider = suggestions[param.findAnnotation<Suggest>()?.providerClass] ?: defaultSuggestions[param.type.kotlin]
+                if (provider != null) {
+                    val sug = provider.suggest(sender, pendingToken, param)
+                    suggestionsSet.addAll(sug)
+                }
+            }
+        } else {
+            for (defaultSub in currentCommand.defaultSubcommands) {
+                if (!hasPermission(sender, defaultSub)) continue
+                if (providedCount < defaultSub.parameters.size) {
+                    val param = defaultSub.parameters[providedCount]
+                    val provider = suggestions[param.findAnnotation<Suggest>()?.providerClass] ?: defaultSuggestions[param.type.kotlin]
+                    if (provider != null) {
+                        val sug = provider.suggest(sender, pendingToken, param)
+                        suggestionsSet.addAll(
+                            if (pendingToken.isNotEmpty())
+                                sug.filter { it.startsWith(pendingToken, ignoreCase = true) && !it.equals(pendingToken, ignoreCase = true) }
+                            else sug
+                        )
                     }
                 }
             }
-            for ((alias, childCmd) in currentCommand.childByAliases) {
-                if (alias.startsWith(pendingToken, ignoreCase = true) &&
-                    !alias.equals(pendingToken, ignoreCase = true) &&
-                    hasPermission(sender, childCmd)
-                ) {
-                    suggestionsSet += alias
+            if (providedCount == 0) {
+                for ((alias, subList) in currentCommand.subcommandByAliases) {
+                    if (alias.startsWith(pendingToken, ignoreCase = true) && !alias.equals(pendingToken, ignoreCase = true)
+                        && subList.any { hasPermission(sender, it) }
+                    ) {
+                        suggestionsSet.add(alias)
+                    }
+                }
+                for ((alias, childCmd) in currentCommand.childByAliases) {
+                    if (alias.startsWith(pendingToken, ignoreCase = true) &&
+                        !alias.equals(pendingToken, ignoreCase = true) &&
+                        hasPermission(sender, childCmd)
+                    ) {
+                        suggestionsSet.add(alias)
+                    }
                 }
             }
         }
-
         return suggestionsSet.toList().distinct()
     }
 

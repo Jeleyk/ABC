@@ -101,7 +101,18 @@ class GenerateSuggestionsTest {
 
     @Test
     fun testParameterAndSubcommandSuggestionsMerging() {
-        assertEquals(setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY", "aaa", "bbb", "oran"), suggest("/fruit "))
+        assertEquals(setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY", "aaa", "sub", "bbb", "oran"), suggest("/fruit "))
+    }
+
+    @Test
+    fun testSubcommandParameterSuggestions() {
+        assertTrue(suggest("/fruit sub").isEmpty())
+        assertEquals(setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY"), suggest("/fruit sub "))
+        assertTrue(suggest("/fruit sub A ").isEmpty())
+        assertTrue(suggest("/fruit sub APPLE").isEmpty())
+        assertEquals(setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY"), suggest("/fruit sub APPLE "))
+        assertEquals(setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY"), suggest("/fruit sub APPLE BANANA "))
+        assertEquals(setOf("STRAWBERRY"), suggest("/fruit sub APPLE S"))
     }
 
     @Test
@@ -132,12 +143,12 @@ class GenerateSuggestionsTest {
 
     @Test
     fun testCaseInsensitiveParameterHandling() {
-        assertEquals(setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY", "aaa", "bbb", "oran"), suggest("/FRUIT "))
+        assertEquals(setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY", "aaa", "bbb", "sub", "oran"), suggest("/FRUIT "))
     }
 
     @Test
     fun testExcessiveWhitespaceHandling() {
-        assertEquals(setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY", "aaa", "bbb", "oran"), suggest("/fruit      "))
+        assertEquals(setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY", "aaa", "sub", "bbb", "oran"), suggest("/fruit      "))
     }
 
     @Test
@@ -224,6 +235,18 @@ class FruitCommand {
 
     @Subcommand(name = "bbb", aliases = [])
     fun bbb() {
+    }
+
+    @Subcommand(name = "sub", aliases = [])
+    fun sub(fruit: Fruit) {
+    }
+
+    @Subcommand(name = "sub", aliases = [])
+    fun sub(fruit: Fruit, fruit2: Fruit) {
+    }
+
+    @Subcommand(name = "sub", aliases = [])
+    fun sub(fruit: Fruit, fruit2: Fruit, fruit3: Fruit) {
     }
 
     @Default
