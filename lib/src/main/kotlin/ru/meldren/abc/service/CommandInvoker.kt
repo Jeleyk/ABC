@@ -125,34 +125,37 @@ internal class CommandInvoker<S : Any, C : Any>(
         val providedCount = parameterTokens.size
         val suggestionsSet = mutableSetOf<String>()
         if (candidateSubcommandDatas != null) {
-            if (providedCount == 0 && pendingToken.isNotEmpty()) return emptyList()
-            val validCandidates = candidateSubcommandDatas.filter { candidate ->
-                if (providedCount == 0) true else {
-                    if (candidate.parameters.size >= providedCount) {
+            val validCandidates = if (providedCount > 0) {
+                candidateSubcommandDatas.filter { candidate ->
+                    candidate.parameters.size >= providedCount && run {
                         val param = candidate.parameters[providedCount - 1]
-                        val provider = suggestions[param.findAnnotation<Suggest>()?.providerClass] ?: defaultSuggestions[param.type.kotlin]
-                        if (provider != null) {
-                            val completions = provider.suggest(sender, parameterTokens.last(), param)
-                            completions.any { it.equals(parameterTokens.last(), ignoreCase = true) }
-                        } else false
-                    } else false
+                        val provider = suggestions[param.findAnnotation<Suggest>()?.providerClass]
+                            ?: defaultSuggestions[param.type.kotlin]
+                        provider?.suggest(sender, parameterTokens.last(), param)?.any { it.equals(parameterTokens.last(), ignoreCase = true) } == true
+                    }
                 }
+            } else {
+                candidateSubcommandDatas
             }
-            val overloadCandidates = validCandidates.filter { it.parameters.size > providedCount }
-            for (candidate in overloadCandidates) {
-                val param = candidate.parameters[providedCount]
-                val provider = suggestions[param.findAnnotation<Suggest>()?.providerClass] ?: defaultSuggestions[param.type.kotlin]
-                if (provider != null) {
-                    val sug = provider.suggest(sender, pendingToken, param)
-                    suggestionsSet.addAll(sug)
-                }
+            val nextParamIndex = providedCount
+            val suggestionsForParam = validCandidates.filter { it.parameters.size > nextParamIndex }
+                .flatMap { candidate ->
+                    val param = candidate.parameters[nextParamIndex]
+                    val provider = suggestions[param.findAnnotation<Suggest>()?.providerClass]
+                        ?: defaultSuggestions[param.type.kotlin]
+                    provider?.suggest(sender, pendingToken, param) ?: emptyList()
+                }.toSet()
+            if (pendingToken.isNotEmpty() && suggestionsForParam.any { it.equals(pendingToken, ignoreCase = true) }) {
+                return emptyList()
             }
+            return suggestionsForParam.toList()
         } else {
             for (defaultSub in currentCommand.defaultSubcommands) {
                 if (!hasPermission(sender, defaultSub)) continue
                 if (providedCount < defaultSub.parameters.size) {
                     val param = defaultSub.parameters[providedCount]
-                    val provider = suggestions[param.findAnnotation<Suggest>()?.providerClass] ?: defaultSuggestions[param.type.kotlin]
+                    val provider = suggestions[param.findAnnotation<Suggest>()?.providerClass]
+                        ?: defaultSuggestions[param.type.kotlin]
                     if (provider != null) {
                         val sug = provider.suggest(sender, pendingToken, param)
                         suggestionsSet.addAll(
@@ -180,8 +183,8 @@ internal class CommandInvoker<S : Any, C : Any>(
                     }
                 }
             }
+            return suggestionsSet.toList().distinct()
         }
-        return suggestionsSet.toList().distinct()
     }
 
     private fun hasPermission(sender: S, commandData: AbstractCommandData) = try {

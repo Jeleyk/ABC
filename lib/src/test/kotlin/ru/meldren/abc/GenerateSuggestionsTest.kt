@@ -109,10 +109,12 @@ class GenerateSuggestionsTest {
         assertTrue(suggest("/fruit sub").isEmpty())
         assertEquals(setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY"), suggest("/fruit sub "))
         assertTrue(suggest("/fruit sub A ").isEmpty())
+        assertEquals(setOf("APPLE"), suggest("/fruit sub A"))
         assertTrue(suggest("/fruit sub APPLE").isEmpty())
         assertEquals(setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY"), suggest("/fruit sub APPLE "))
         assertEquals(setOf("APPLE", "BANANA", "ORANGE", "STRAWBERRY"), suggest("/fruit sub APPLE BANANA "))
         assertEquals(setOf("STRAWBERRY"), suggest("/fruit sub APPLE S"))
+        assertEquals(setOf("ORANGE"), suggest("/fruit sub APPLE STRAWBERRY O"))
     }
 
     @Test
