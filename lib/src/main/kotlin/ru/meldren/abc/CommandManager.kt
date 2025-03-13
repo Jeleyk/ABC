@@ -3,8 +3,10 @@ package ru.meldren.abc
 import ru.meldren.abc.common.CommandData
 import ru.meldren.abc.exception.invocation.CommandInvocationException
 import ru.meldren.abc.processor.*
-import ru.meldren.abc.service.*
-import kotlin.reflect.*
+import ru.meldren.abc.service.CommandInvoker
+import ru.meldren.abc.service.CommandRegistry
+import ru.meldren.abc.service.ProcessorRegistry
+import kotlin.reflect.KClass
 
 @Suppress("NOTHING_TO_INLINE")
 open class CommandManager<S : Any, C : Any>(val commandPrefix: String = "/") {
@@ -50,6 +52,10 @@ open class CommandManager<S : Any, C : Any>(val commandPrefix: String = "/") {
         get() = _suggestions.toMap()
     val permissionHandler
         get() = processorRegistry.permissionHandler
+    val prePermissionExecutionHandler
+        get() = processorRegistry.prePermissionExecutionHandler
+    val postPermissionExecutionHandler
+        get() = processorRegistry.postPermissionExecutionHandler
     val cooldownHandler
         get() = processorRegistry.cooldownHandler
 
@@ -58,9 +64,15 @@ open class CommandManager<S : Any, C : Any>(val commandPrefix: String = "/") {
     inline fun registerPermissionHandler(handler: PermissionHandler<S>) =
         processorRegistry.registerPermissionHandler(handler)
 
+    /* Execution handler */
+
+    inline fun registerExecutionHandler(handler: ExecutionHandler<S>, prePermissionHandler: Boolean) =
+        processorRegistry.registerExecutionHandler(handler, prePermissionHandler)
+
     /* Cooldown handler */
 
-    inline fun registerCooldownHandler(handler: CooldownHandler<S, C>) = processorRegistry.registerCooldownHandler(handler)
+    inline fun registerCooldownHandler(handler: CooldownHandler<S, C>) =
+        processorRegistry.registerCooldownHandler(handler)
 
     /* Commands registry */
 
