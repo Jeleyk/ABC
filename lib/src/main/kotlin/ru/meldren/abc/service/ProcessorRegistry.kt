@@ -1,14 +1,12 @@
 package ru.meldren.abc.service
 
-import ru.meldren.abc.exception.*
+import ru.meldren.abc.exception.CommandRegistrationException
 import ru.meldren.abc.exception.invocation.CommandInvocationException
 import ru.meldren.abc.processor.*
-import ru.meldren.abc.util.checkNotNullOrThrow
 import ru.meldren.abc.util.checkNullOrThrow
 import ru.meldren.abc.util.checkOrThrow
 import ru.meldren.abc.util.supertypeTypeParameters
 import kotlin.reflect.KClass
-import kotlin.reflect.full.isSubclassOf
 
 @PublishedApi
 internal class ProcessorRegistry<S : Any, C : Any>(
@@ -22,6 +20,10 @@ internal class ProcessorRegistry<S : Any, C : Any>(
 
     var permissionHandler: PermissionHandler<S>? = null
         private set
+    var prePermissionExecutionHandler: ExecutionHandler<S>? = null
+        private set
+    var postPermissionExecutionHandler: ExecutionHandler<S>? = null
+        private set
     var cooldownHandler: CooldownHandler<S, C>? = null
         private set
 
@@ -31,6 +33,17 @@ internal class ProcessorRegistry<S : Any, C : Any>(
         }
 
         permissionHandler = handler
+    }
+
+    fun registerExecutionHandler(handler: ExecutionHandler<S>, prePermissionHandler: Boolean) {
+        checkNullOrThrow(handler) {
+            CommandRegistrationException("Execution handler is already registered.")
+        }
+        if (prePermissionHandler) {
+            prePermissionExecutionHandler = handler
+        } else {
+            postPermissionExecutionHandler = handler
+        }
     }
 
     fun registerCooldownHandler(handler: CooldownHandler<S, C>) {

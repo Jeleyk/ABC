@@ -50,10 +50,14 @@ internal class CommandInvoker<S : Any, C : Any>(
             val subcommandsData = findSubcommands(args, rawArgs, commandData)
             val (subcommandData, params) = findSubcommand(sender, args, subcommandsData)
 
+            processorRegistry.prePermissionExecutionHandler?.execute(sender, input, commandData, subcommandData)
+
             processorRegistry.permissionHandler?.let {
                 it.checkPermission(sender, commandData)
                 it.checkPermission(sender, subcommandData)
             }
+
+            processorRegistry.postPermissionExecutionHandler?.execute(sender, input, commandData, subcommandData)
 
             if (!checkBeforeCommands(sender, commandData)) {
                 throw BeforeCommandFailException(rawArgs, commandData, subcommandData)
@@ -131,7 +135,8 @@ internal class CommandInvoker<S : Any, C : Any>(
                         val param = candidate.parameters[providedCount - 1]
                         val provider = suggestions[param.findAnnotation<Suggest>()?.providerClass]
                             ?: defaultSuggestions[param.type.kotlin]
-                        provider?.suggest(sender, parameterTokens.last(), param)?.any { it.equals(parameterTokens.last(), ignoreCase = true) } == true
+                        provider?.suggest(sender, parameterTokens.last(), param)
+                            ?.any { it.equals(parameterTokens.last(), ignoreCase = true) } == true
                     }
                 }
             } else {
@@ -160,7 +165,12 @@ internal class CommandInvoker<S : Any, C : Any>(
                         val sug = provider.suggest(sender, pendingToken, param)
                         suggestionsSet.addAll(
                             if (pendingToken.isNotEmpty())
-                                sug.filter { it.startsWith(pendingToken, ignoreCase = true) && !it.equals(pendingToken, ignoreCase = true) }
+                                sug.filter {
+                                    it.startsWith(pendingToken, ignoreCase = true) && !it.equals(
+                                        pendingToken,
+                                        ignoreCase = true
+                                    )
+                                }
                             else sug
                         )
                     }
@@ -168,7 +178,10 @@ internal class CommandInvoker<S : Any, C : Any>(
             }
             if (providedCount == 0) {
                 for ((alias, subList) in currentCommand.subcommandByAliases) {
-                    if (alias.startsWith(pendingToken, ignoreCase = true) && !alias.equals(pendingToken, ignoreCase = true)
+                    if (alias.startsWith(pendingToken, ignoreCase = true) && !alias.equals(
+                            pendingToken,
+                            ignoreCase = true
+                        )
                         && subList.any { hasPermission(sender, it) }
                     ) {
                         suggestionsSet.add(alias)
