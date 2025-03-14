@@ -36,12 +36,15 @@ internal class ProcessorRegistry<S : Any, C : Any>(
     }
 
     fun registerExecutionHandler(handler: ExecutionHandler<S>, prePermissionHandler: Boolean) {
-        checkNullOrThrow(handler) {
-            CommandRegistrationException("Execution handler is already registered.")
-        }
         if (prePermissionHandler) {
+            checkNullOrThrow(prePermissionExecutionHandler) {
+                CommandRegistrationException("Execution handler is already registered.")
+            }
             prePermissionExecutionHandler = handler
         } else {
+            checkNullOrThrow(postPermissionExecutionHandler) {
+                CommandRegistrationException("Execution handler is already registered.")
+            }
             postPermissionExecutionHandler = handler
         }
     }
