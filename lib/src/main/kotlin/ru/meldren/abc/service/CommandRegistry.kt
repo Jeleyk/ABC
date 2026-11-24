@@ -133,7 +133,7 @@ internal class CommandRegistry<C : Any>(
     }
 
     private fun getChildren(command: C): List<CommandData<C>> {
-        return command::class.nestedClasses.map {
+        return command::class.nestedClasses.filter { it.java.isAnnotationPresent(Command::class.java) }.map {
             val constructor = it.constructors.firstOrNull()
             checkOrThrow(constructor != null && constructor.valueParameters.isEmpty()) {
                 CommandRegistrationException("${it::class.simpleName} must have a single no-arg constructor.")

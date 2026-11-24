@@ -352,8 +352,9 @@ internal class CommandInvoker<S : Any, C : Any>(
         val senderArgIndex = functionParams.indexOfFirst { it.hasAnnotation<Sender>() }
         if (senderArgIndex != -1) {
             val param = functionParams[senderArgIndex]
-            if (!(param.type.classifier as KClass<*>).isSuperclassOf(sender::class)) {
-                throw ArgumentSenderTypeMismatchException((param.type.classifier as KClass<*>).java)
+            val senderType = (param.type.classifier as KClass<*>).javaObjectType
+            if (!senderType.isInstance(sender)) {
+                throw ArgumentSenderTypeMismatchException(senderType)
             }
             val paramData = sender to param.annotations
             params.add(senderArgIndex, paramData)

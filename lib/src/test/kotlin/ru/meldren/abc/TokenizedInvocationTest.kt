@@ -17,6 +17,13 @@ class TokenizedInvocationTest {
     }
 
     @Test
+    fun doesNotRegisterAnUnannotatedNestedClass() {
+        val manager = CommandManager<Any, Any>().apply { registerCommand(Echo()) }
+
+        assertEquals(emptyList<Any>(), manager.findRegisteredCommand("echo")?.children)
+    }
+
+    @Test
     fun reportsTheExpectedSenderType() {
         var expectedType: Class<*>? = null
         val manager = CommandManager<Any, Any>().apply {
@@ -34,6 +41,8 @@ class TokenizedInvocationTest {
 
 @Command(name = "echo", aliases = ["e"])
 class Echo {
+    data class Options(val text: String)
+
     @Default
     fun echo(@Sender sender: String, vararg values: String) = values.toList()
 }
