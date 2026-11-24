@@ -118,6 +118,19 @@ class GenerateSuggestionsTest {
     }
 
     @Test
+    fun testCompletionAfterManuallyEnteredValue() {
+        val manager = CommandManager<Any, Any>().apply {
+            registerCommand(ManualArgumentCommand())
+            registerSuggestionProvider(provider = RecipientProvider)
+            registerSuggestionProvider(provider = ContentProvider)
+        }
+        val expected = setOf("Hi", "Hello", "How are you", "Good morning")
+
+        assertEquals(expected, manager.generateSuggestions("", "/manual plain OfflinePlayer ").toSet())
+        assertEquals(expected, manager.generateSuggestions("", "/manual suggested OfflinePlayer ").toSet())
+    }
+
+    @Test
     fun testPartialInputForMergedSuggestions() {
         assertEquals(setOf("APPLE", "aaa"), suggest("/fruit a"))
     }
@@ -324,4 +337,15 @@ enum class Fruit {
     BANANA,
     ORANGE,
     STRAWBERRY
+}
+
+@Command(name = "manual", aliases = [])
+class ManualArgumentCommand {
+    @Subcommand(name = "plain", aliases = [])
+    fun plain(recipient: String, @Suggest(ContentProvider::class) content: String) {
+    }
+
+    @Subcommand(name = "suggested", aliases = [])
+    fun suggested(@Suggest(RecipientProvider::class) recipient: String, @Suggest(ContentProvider::class) content: String) {
+    }
 }

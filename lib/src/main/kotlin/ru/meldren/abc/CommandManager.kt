@@ -85,6 +85,13 @@ open class CommandManager<S : Any, C : Any>(val commandPrefix: String = "/") {
     @JvmName(" ")
     inline fun invokeCommand(sender: S, input: String) = commandInvoker.invokeCommand<Unit>(sender, input)
 
+    /** Invokes a command from a transport that has already separated the name and arguments. */
+    fun <T> invokeTokenizedCommand(sender: S, alias: String, arguments: List<String>): T? =
+        commandInvoker.invokeTokenizedCommand(sender, alias, arguments)
+
+    /** Looks up a registered root command by any of its aliases, without the command prefix. */
+    fun findRegisteredCommand(alias: String): CommandData<C>? = commandsByAliases[alias.lowercase()]
+
     inline fun generateSuggestions(sender: S, input: String): List<String> =
         commandInvoker.generateSuggestions(sender, input)
 

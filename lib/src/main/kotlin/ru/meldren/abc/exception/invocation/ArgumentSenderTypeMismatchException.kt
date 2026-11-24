@@ -1,3 +1,3 @@
 package ru.meldren.abc.exception.invocation
 
-class ArgumentSenderTypeMismatchException : CommandInvocationException()
+class ArgumentSenderTypeMismatchException(val expectedType: Class<*>? = null) : CommandInvocationException()

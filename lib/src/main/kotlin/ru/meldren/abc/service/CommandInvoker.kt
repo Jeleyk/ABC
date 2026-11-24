@@ -41,11 +41,19 @@ internal class CommandInvoker<S : Any, C : Any>(
     private val commandsByAliases: MutableMap<String, CommandData<C>>
 ) {
 
+    fun <T> invokeCommand(sender: S, input: String): T? =
+        invoke(sender, input) { parseInput(input) }
+
+    fun <T> invokeTokenizedCommand(sender: S, alias: String, arguments: List<String>): T? {
+        val tokens = listOf(alias) + arguments
+        return invoke(sender, commandPrefix + tokens.joinToString(" ")) { tokens }
+    }
+
     @Suppress("UNCHECKED_CAST")
-    fun <T> invokeCommand(sender: S, input: String): T? {
+    private fun <T> invoke(sender: S, input: String, readArguments: () -> List<String>): T? {
         return try {
-            val args = parseInput(input)
-            val rawArgs = args.toList()
+            val rawArgs = readArguments()
+            val args = LinkedList(rawArgs)
             val commandData = findCommand(args, rawArgs)
             val subcommandsData = findSubcommands(args, rawArgs, commandData)
             val (subcommandData, params) = findSubcommand(sender, args, subcommandsData)
@@ -135,8 +143,11 @@ internal class CommandInvoker<S : Any, C : Any>(
                         val param = candidate.parameters[providedCount - 1]
                         val provider = suggestions[param.findAnnotation<Suggest>()?.providerClass]
                             ?: defaultSuggestions[param.type.kotlin]
-                        provider?.suggest(sender, parameterTokens.last(), param)
-                            ?.any { it.equals(parameterTokens.last(), ignoreCase = true) } == true
+                        // String providers can suggest a subset of valid values, such as online players.
+                        // A parameter without a provider cannot be checked through suggestions either.
+                        param.type == String::class.java || provider == null ||
+                            provider.suggest(sender, parameterTokens.last(), param)
+                                .any { it.equals(parameterTokens.last(), ignoreCase = true) }
                     }
                 }
             } else {
@@ -342,7 +353,7 @@ internal class CommandInvoker<S : Any, C : Any>(
         if (senderArgIndex != -1) {
             val param = functionParams[senderArgIndex]
             if (!(param.type.classifier as KClass<*>).isSuperclassOf(sender::class)) {
-                throw ArgumentSenderTypeMismatchException()
+                throw ArgumentSenderTypeMismatchException((param.type.classifier as KClass<*>).java)
             }
             val paramData = sender to param.annotations
             params.add(senderArgIndex, paramData)
